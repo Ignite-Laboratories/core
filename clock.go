@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/ignite-laboratories/support/atomic"
 	"sync"
+	"time"
 )
 
 // Clock represents a source of time.  Once a clock is started, all kernels
@@ -11,7 +12,7 @@ import (
 // don't run more frequently than they are invoked by the clock.
 type Clock struct {
 	period  int
-	Kernels *atomic.Slice[*Kernel]
+	Kernels *atomic.Slice[Kernel]
 }
 
 // NewClock creates a new instance of a Clock.  The provided period defines how
@@ -20,7 +21,7 @@ type Clock struct {
 func NewClock(period int) Clock {
 	return Clock{
 		period:  period,
-		Kernels: atomic.NewSlice[*Kernel](),
+		Kernels: atomic.NewSlice[Kernel](),
 	}
 }
 
@@ -28,14 +29,23 @@ func NewClock(period int) Clock {
 func (c Clock) Start() {
 	var wg sync.WaitGroup
 	beat := 0
+	lastNow := time.Now()
 
 	for KeepAlive {
+		var ctx Context
+		ctx.Now = time.Now()
+		ctx.Delta = ctx.Now.Sub(lastNow)
+		ctx.Beat = beat
+		ctx.Period = c.period
+		ctx.waitGroup = &wg
+
 		// We retrieve all kernels first in case the
 		// data changes during this loop cycle.
 		kernels := c.Kernels.All()
 		wg.Add(len(kernels))
-		for _, n := range kernels {
-			go (*n).Tick(beat, &wg)
+		for _, k := range kernels {
+			ctx.Kernel = k
+			go k.Tick(ctx)
 		}
 		wg.Wait()
 
@@ -43,5 +53,6 @@ func (c Clock) Start() {
 		if beat >= c.period {
 			beat = 0
 		}
+		lastNow = ctx.Now
 	}
 }
