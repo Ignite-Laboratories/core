@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/ignite-laboratories/core/atomic"
+	"github.com/ignite-laboratories/support/atomic"
 	"sync"
 )
 
@@ -15,8 +15,8 @@ type Clock struct {
 }
 
 // NewClock creates a new instance of a Clock.  The provided period defines how
-// // high to increment the current beat before looping back to 0.  If your clock
-// // should loop between 0-31, provide a period of 32 beats.
+// high to increment the current beat before looping back to 0.  If your clock
+// should loop between 0-31, provide a period of 32 beats.
 func NewClock(period int) Clock {
 	return Clock{
 		period:  period,
@@ -26,8 +26,8 @@ func NewClock(period int) Clock {
 
 // Start is the entry point to begin ticking.
 func (c Clock) Start() {
-	beat := 0
 	var wg sync.WaitGroup
+	beat := 0
 
 	for KeepAlive {
 		// We retrieve all kernels first in case the
@@ -40,7 +40,7 @@ func (c Clock) Start() {
 		wg.Wait()
 
 		beat++
-		if beat == c.period {
+		if beat >= c.period {
 			beat = 0
 		}
 	}
