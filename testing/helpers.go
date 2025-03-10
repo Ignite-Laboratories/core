@@ -2,6 +2,12 @@ package testing
 
 import "testing"
 
+func CompareInts(a int, b int, t *testing.T) {
+	if a != b {
+		t.Errorf("Expected %d, Got %d", a, b)
+	}
+}
+
 func CompareIntSlices(a []int, b []int, t *testing.T) {
 	if len(a) != len(b) {
 		t.Errorf("Slices are not the same length")
