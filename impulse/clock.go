@@ -56,7 +56,7 @@ func (c *Clock) Start() {
 		ctx.Now = time.Now()
 		ctx.Delta = ctx.Now.Sub(lastNow)
 		ctx.Beat = beat
-		ctx.Period = c.period
+		ctx.Clock = c
 		ctx.waitGroup = &wg
 
 		// Calculate the current clock rate
