@@ -7,11 +7,13 @@ import (
 	"time"
 )
 
-// Clock represents a source of time.  Once a impulse is started, all kernels
+// Clock represents a source of time.  Once a clock is started, every Kernel
 // associated with it will be invoked as frequently as possible in batched waves.
-// Kernels that run longer than a single tick are responsible for ensuring they
-// don't run more frequently than they are invoked by the impulse.
+// Any Kernel that runs longer than a single tick is responsible for ensuring it
+// doesn't run more frequently than it's invoked by the Clock.
+// This is because kernels are meant to run -once- per impulse.
 type Clock struct {
+	Rate    int
 	period  int
 	kernels *atomic.Slice[Kernel]
 }
@@ -44,14 +46,26 @@ func (c *Clock) Start() {
 	var wg sync.WaitGroup
 	beat := 0
 	lastNow := time.Now()
+	tickCount := 0
+	tickCountStart := lastNow
 
 	for core.KeepAlive {
+		tickCount++
+
 		var ctx Context
 		ctx.Now = time.Now()
 		ctx.Delta = ctx.Now.Sub(lastNow)
 		ctx.Beat = beat
 		ctx.Period = c.period
 		ctx.waitGroup = &wg
+
+		// Calculate the current clock rate
+		if tickCount > 1024 {
+			elapsed := ctx.Now.Sub(tickCountStart).Seconds()
+			c.Rate = int(float64(tickCount) / elapsed)
+			tickCount = 0
+			tickCountStart = ctx.Now
+		}
 
 		// We retrieve all kernels first in case the
 		// data changes during this loop cycle.
@@ -69,6 +83,19 @@ func (c *Clock) Start() {
 		}
 		lastNow = ctx.Now
 	}
+}
+
+func (c *Clock) EveryNthBeat(n int, action ActionFunc) {
+	count := 0
+	k := newActionPotential(func(ctx Context) bool {
+		count++
+		if count >= n {
+			count = 0
+			return true
+		}
+		return false
+	}, action)
+	c.AddKernel(k)
 }
 
 // On creates a Kernel that fires the provided action whenever the invoked potential function returns true.
