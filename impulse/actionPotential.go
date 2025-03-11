@@ -45,6 +45,11 @@ func (ap *actionPotential) GetID() uint64 {
 	return ap.ID
 }
 
+// IsExecuting returns whether the ActivationFunc is currently executing.
+func (ap *actionPotential) IsExecuting() bool {
+	return ap.executing
+}
+
 // Tick is called by a Clock for every beat.  The provided WaitGroup is decremented
 // once the actionPotential has finished executing (or not).  It calls the neuron's potential
 // function prior to asynchronously calling the neuron's action function, if the

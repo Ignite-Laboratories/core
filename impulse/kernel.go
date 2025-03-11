@@ -9,4 +9,6 @@ type Kernel interface {
 	Tick(ctx Context)
 	// GetID returns the Kernel identifier.
 	GetID() uint64
+	// IsExecuting returns whether the Kernel is currently executing.
+	IsExecuting() bool
 }
