@@ -13,17 +13,18 @@ import (
 // doesn't run more frequently than it's invoked by the Clock.
 // This is because kernels are meant to run -once- per impulse.
 type Clock struct {
+	ID      uint64
 	Rate    int
-	period  int
+	Period  int
 	kernels *atomic.Slice[Kernel]
 }
 
-// NewClock creates a new instance of a Clock.  The provided period defines how
-// high to increment the current beat before looping back to 0.  If your impulse
-// should loop between 0-31, provide a period of 32 beats.
+// NewClock creates a new Clock with a specified 'period' that determines how
+// many beats the clock processes before looping back to 0.
 func NewClock(period int) Clock {
 	return Clock{
-		period:  period,
+		ID:      core.NextID(),
+		Period:  period,
 		kernels: atomic.NewSlice[Kernel](),
 	}
 }
@@ -54,7 +55,7 @@ func (c *Clock) Start() {
 
 		var ctx Context
 		ctx.Now = time.Now()
-		ctx.Delta = ctx.Now.Sub(lastNow)
+		ctx.Delta = time.Duration(0)
 		ctx.Beat = beat
 		ctx.Clock = c
 		ctx.waitGroup = &wg
@@ -78,14 +79,15 @@ func (c *Clock) Start() {
 		wg.Wait()
 
 		beat++
-		if beat >= c.period {
+		if beat >= c.Period {
 			beat = 0
 		}
 		lastNow = ctx.Now
 	}
 }
 
-func (c *Clock) EveryNthBeat(n int, action ActionFunc) {
+// EveryNthBeat creates a Kernel that fires the provided action every n beats.
+func (c *Clock) EveryNthBeat(n int, action ActivationFunc) {
 	count := 0
 	k := newActionPotential(func(ctx Context) bool {
 		count++
@@ -99,13 +101,13 @@ func (c *Clock) EveryNthBeat(n int, action ActionFunc) {
 }
 
 // On creates a Kernel that fires the provided action whenever the invoked potential function returns true.
-func (c *Clock) On(potential PotentialFunc, action ActionFunc) {
+func (c *Clock) On(potential PotentialFunc, action ActivationFunc) {
 	k := newActionPotential(potential, action)
 	c.AddKernel(k)
 }
 
 // OnAllBeats creates a Kernel that fires the provided action on every beat.
-func (c *Clock) OnAllBeats(action ActionFunc) {
+func (c *Clock) OnAllBeats(action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return true
 	}, action)
@@ -113,7 +115,7 @@ func (c *Clock) OnAllBeats(action ActionFunc) {
 }
 
 // OnOddBeats creates a Kernel that fires the provided action on odd beats.
-func (c *Clock) OnOddBeats(action ActionFunc) {
+func (c *Clock) OnOddBeats(action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return ctx.Beat%2 != 0
 	}, action)
@@ -121,7 +123,7 @@ func (c *Clock) OnOddBeats(action ActionFunc) {
 }
 
 // OnEvenBeats creates a Kernel that fires the provided action on even beats.
-func (c *Clock) OnEvenBeats(action ActionFunc) {
+func (c *Clock) OnEvenBeats(action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return ctx.Beat%2 == 0
 	}, action)
@@ -129,12 +131,12 @@ func (c *Clock) OnEvenBeats(action ActionFunc) {
 }
 
 // OnDownbeat creates a Kernel that fires the provided action on beat 0
-func (c *Clock) OnDownbeat(action ActionFunc) {
+func (c *Clock) OnDownbeat(action ActivationFunc) {
 	c.OnBeat(0, action)
 }
 
 // OnBeat creates a Kernel that fires the provided action on the specified beat
-func (c *Clock) OnBeat(beat int, action ActionFunc) {
+func (c *Clock) OnBeat(beat int, action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return ctx.Beat == beat
 	}, action)
