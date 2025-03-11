@@ -86,7 +86,8 @@ func (c *Clock) Start() {
 	}
 }
 
-// EveryNthBeat creates a Kernel that fires the provided action every n beats.
+// EveryNthBeat creates a Kernel that fires the provided action every n beats, regardless
+// of the clock's current beat value.
 func (c *Clock) EveryNthBeat(n int, action ActivationFunc) {
 	count := 0
 	k := newActionPotential(func(ctx Context) bool {
