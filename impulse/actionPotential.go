@@ -18,7 +18,8 @@ type actionPotential struct {
 	// ID is the unique entity identifier for this actionPotential.
 	ID uint64
 	// lastTrigger is the last moment in Clock-time this actionPotential was activated.
-	lastTrigger time.Time
+	lastTrigger    time.Time
+	lastCompletion time.Time
 	// executing is true if this actionPotential is currently activated.
 	executing bool
 	// potential is a function that determines if the ActivationFunc should be invoked.
@@ -54,10 +55,12 @@ func (ap *actionPotential) Tick(ctx Context) {
 		ap.executing = true
 		if !ap.lastTrigger.IsZero() {
 			ctx.Delta = ctx.Now.Sub(ap.lastTrigger)
+			ctx.LastExecution = ap.lastCompletion.Sub(ap.lastTrigger)
 		}
 		ap.lastTrigger = ctx.Now
 		go func() {
 			ap.action(ctx)
+			ap.lastCompletion = time.Now()
 			ap.executing = false
 		}()
 	}

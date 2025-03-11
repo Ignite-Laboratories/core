@@ -12,6 +12,8 @@ type Context struct {
 	Now time.Time
 	// Delta is the amount of time that has passed since the Kernel's last impulse.
 	Delta time.Duration
+	// LastExecution is the amount of time that the Kernel last took to finish execution.
+	LastExecution time.Duration
 	// Beat increments up to a fixed value defined by the Clock before looping back to 0.
 	Beat int
 	// Clock is a reference back to the source Clock.
@@ -21,9 +23,9 @@ type Context struct {
 	waitGroup *sync.WaitGroup
 }
 
-func (c Context) String() string {
-	if c.Delta == 0 {
-		return fmt.Sprintf("[Pulse %d.%d] Kernel %d activated", c.Clock.ID, c.Beat, c.Kernel.GetID())
+func (ctx Context) String() string {
+	if ctx.Delta == 0 {
+		return fmt.Sprintf("[Pulse %d.%d] Kernel %d activated", ctx.Clock.ID, ctx.Beat, ctx.Kernel.GetID())
 	}
-	return fmt.Sprintf("[Pulse %d.%d] Kernel %d activated (Δt %s)", c.Clock.ID, c.Beat, c.Kernel.GetID(), c.Delta)
+	return fmt.Sprintf("[Pulse %d.%d] Kernel %d activated (Δt %s) (Execution time %s)", ctx.Clock.ID, ctx.Beat, ctx.Kernel.GetID(), ctx.Delta, ctx.LastExecution)
 }
