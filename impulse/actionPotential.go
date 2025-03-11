@@ -12,8 +12,6 @@ type PotentialFunc func(ctx Context) bool
 type ActivationFunc func(ctx Context)
 
 // actionPotential represents an executable entry point for a Kernel.
-// While an actionPotential doesn't handle any data directly, it motivates
-// data through a neural network.
 type actionPotential struct {
 	// ID is the unique entity identifier for this actionPotential.
 	ID uint64
@@ -50,17 +48,17 @@ func (ap *actionPotential) IsExecuting() bool {
 	return ap.executing
 }
 
-// Tick is called by a Clock for every beat.  The provided WaitGroup is decremented
-// once the actionPotential has finished executing (or not).  It calls the neuron's potential
-// function prior to asynchronously calling the neuron's action function, if the
-// potential is true.  Once an action is initiated, the neuron will not invoke another
-// action until the last action completes.
+// Tick is called by a Clock for every beat.  It calls the kernel's PotentialFunc
+// prior to asynchronously calling the kernel's ActivationFunc, if the potential
+// function returns true.  Once the ActivationFunc starts executing, the system
+// will not invoke it again until the current action completes. The provided WaitGroup
+// is decremented once the PotentialFunc returns, regardless of activation.
 func (ap *actionPotential) Tick(ctx Context) {
 	if !ap.executing && ap.potential(ctx) {
 		ap.executing = true
 		if !ap.lastTrigger.IsZero() {
 			ctx.Delta = ctx.Moment.Sub(ap.lastTrigger)
-			ctx.LastExecution = ap.lastCompletion.Sub(ap.lastTrigger)
+			ctx.LastDuration = ap.lastCompletion.Sub(ap.lastTrigger)
 		}
 		ap.lastTrigger = ctx.Moment
 		go func() {

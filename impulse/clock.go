@@ -8,19 +8,26 @@ import (
 )
 
 // Clock represents a source of time.  Once a clock is started, every Kernel
-// associated with it will be invoked as frequently as possible in batched waves.
-// Any Kernel that runs longer than a single tick is responsible for ensuring it
-// doesn't run more frequently than it's invoked by the Clock.
-// This is because kernels are meant to run -once- per impulse.
+// associated with it will be tested for invocation as frequently as possible.
+// If it's PotentialFunc returns true for that beat of the Clock, it's ActivationFunc
+// is invoked. If the that ActivationFunc is still executing and the PotentialFunc
+// returns true, the impulse is ignored - ensuring each kernel only executes serially.
 type Clock struct {
-	ID       uint64
-	Rate     int
-	Period   int
-	Activate Activation
-	kernels  *atomic.Slice[Kernel]
+	// ID is the unique entity identifier for this Clock.
+	ID uint64
+	// ClockRate represents the current number of beats per second - it is a read-only value.
+	ClockRate int
+	// Period represents the number this clock counts to before looping - it is a writable value.
+	Period int
+	// Activate provides a selection of helper methods for Kernel inception.
+	Activate activation
+	// kernels stores the currently executing kernels on this clock.
+	kernels *atomic.Slice[Kernel]
 }
 
-type Activation struct {
+// activation provides a selection of helper methods for Kernel inception.
+type activation struct {
+	// clock provides a reference back to the source Clock.
 	clock *Clock
 }
 
@@ -32,7 +39,7 @@ func NewClock(period int) Clock {
 		Period:  period,
 		kernels: atomic.NewSlice[Kernel](),
 	}
-	clock.Activate = Activation{clock: clock}
+	clock.Activate = activation{clock: clock}
 	return *clock
 }
 
@@ -70,7 +77,7 @@ func (c *Clock) Start() {
 		// Calculate the current clock rate
 		if tickCount > 1024 {
 			elapsed := ctx.Moment.Sub(tickCountStart).Seconds()
-			c.Rate = int(float64(tickCount) / elapsed)
+			c.ClockRate = int(float64(tickCount) / elapsed)
 			tickCount = 0
 			tickCountStart = ctx.Moment
 		}
@@ -95,7 +102,7 @@ func (c *Clock) Start() {
 
 // EveryNthBeat creates a Kernel that fires the provided action every n beats, regardless
 // of the clock's current beat value.
-func (a *Activation) EveryNthBeat(n int, action ActivationFunc) {
+func (a *activation) EveryNthBeat(n int, action ActivationFunc) {
 	count := 0
 	k := newActionPotential(func(ctx Context) bool {
 		// Only count while the kernel is not executing
@@ -114,13 +121,13 @@ func (a *Activation) EveryNthBeat(n int, action ActivationFunc) {
 }
 
 // OnCondition creates a Kernel that fires the provided action whenever the invoked potential function returns true.
-func (a *Activation) OnCondition(potential PotentialFunc, action ActivationFunc) {
+func (a *activation) OnCondition(potential PotentialFunc, action ActivationFunc) {
 	k := newActionPotential(potential, action)
 	a.clock.AddKernel(k)
 }
 
 // EveryBeat creates a Kernel that fires the provided action on every beat.
-func (a *Activation) EveryBeat(action ActivationFunc) {
+func (a *activation) EveryBeat(action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return true
 	}, action)
@@ -128,7 +135,7 @@ func (a *Activation) EveryBeat(action ActivationFunc) {
 }
 
 // OnOddBeats creates a Kernel that fires the provided action on odd beats.
-func (a *Activation) OnOddBeats(action ActivationFunc) {
+func (a *activation) OnOddBeats(action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return ctx.Beat%2 != 0
 	}, action)
@@ -136,7 +143,7 @@ func (a *Activation) OnOddBeats(action ActivationFunc) {
 }
 
 // OnEvenBeats creates a Kernel that fires the provided action on even beats.
-func (a *Activation) OnEvenBeats(action ActivationFunc) {
+func (a *activation) OnEvenBeats(action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return ctx.Beat%2 == 0
 	}, action)
@@ -144,12 +151,12 @@ func (a *Activation) OnEvenBeats(action ActivationFunc) {
 }
 
 // OnDownbeat creates a Kernel that fires the provided action on beat 0
-func (a *Activation) OnDownbeat(action ActivationFunc) {
+func (a *activation) OnDownbeat(action ActivationFunc) {
 	a.clock.Activate.OnBeatNumber(0, action)
 }
 
 // OnBeatNumber creates a Kernel that fires the provided action on the specified beat
-func (a *Activation) OnBeatNumber(beat int, action ActivationFunc) {
+func (a *activation) OnBeatNumber(beat int, action ActivationFunc) {
 	k := newActionPotential(func(ctx Context) bool {
 		return ctx.Beat == beat
 	}, action)
