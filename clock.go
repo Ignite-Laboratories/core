@@ -12,7 +12,7 @@ import (
 // don't run more frequently than they are invoked by the clock.
 type Clock struct {
 	period  int
-	Kernels *atomic.Slice[Kernel]
+	kernels *atomic.Slice[Kernel]
 }
 
 // NewClock creates a new instance of a Clock.  The provided period defines how
@@ -21,12 +21,31 @@ type Clock struct {
 func NewClock(period int) Clock {
 	return Clock{
 		period:  period,
-		Kernels: atomic.NewSlice[Kernel](),
+		kernels: atomic.NewSlice[Kernel](),
 	}
 }
 
+func (c *Clock) AddKernel(kernel Kernel) {
+	c.kernels.Add(kernel)
+}
+
+func (c *Clock) RemoveKernel(kernel Kernel) {
+	id := kernel.GetID()
+	c.kernels.RemoveIf(func(k Kernel) bool {
+		return k.GetID() == id
+	})
+}
+
+// OnBeat creates a Kernel that fires on the specified beat
+func (c *Clock) OnBeat(beat int, action ActionFunc) {
+	k := NewKernel(func(ctx Context) bool {
+		return ctx.Beat == beat
+	}, action)
+	c.AddKernel(k)
+}
+
 // Start is the entry point to begin ticking.
-func (c Clock) Start() {
+func (c *Clock) Start() {
 	var wg sync.WaitGroup
 	beat := 0
 	lastNow := time.Now()
@@ -41,9 +60,9 @@ func (c Clock) Start() {
 
 		// We retrieve all kernels first in case the
 		// data changes during this loop cycle.
-		kernels := c.Kernels.All()
-		wg.Add(len(kernels))
-		for _, k := range kernels {
+		ks := c.kernels.All()
+		wg.Add(len(ks))
+		for _, k := range ks {
 			ctx.Kernel = k
 			go k.Tick(ctx)
 		}
