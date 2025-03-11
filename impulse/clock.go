@@ -54,7 +54,7 @@ func (c *Clock) Start() {
 		tickCount++
 
 		var ctx Context
-		ctx.Now = time.Now()
+		ctx.Moment = time.Now()
 		ctx.Delta = time.Duration(0)
 		ctx.Beat = beat
 		ctx.Clock = c
@@ -62,10 +62,10 @@ func (c *Clock) Start() {
 
 		// Calculate the current clock rate
 		if tickCount > 1024 {
-			elapsed := ctx.Now.Sub(tickCountStart).Seconds()
+			elapsed := ctx.Moment.Sub(tickCountStart).Seconds()
 			c.Rate = int(float64(tickCount) / elapsed)
 			tickCount = 0
-			tickCountStart = ctx.Now
+			tickCountStart = ctx.Moment
 		}
 
 		// We retrieve all kernels first in case the
@@ -82,7 +82,7 @@ func (c *Clock) Start() {
 		if beat >= c.Period {
 			beat = 0
 		}
-		lastNow = ctx.Now
+		lastNow = ctx.Moment
 	}
 }
 

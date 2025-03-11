@@ -8,8 +8,8 @@ import (
 
 // Context represents a set of contextually relevant information for a Kernel.
 type Context struct {
-	// Now is the currently processed moment in time for this impulse.
-	Now time.Time
+	// Moment is the currently processed moment in time for this impulse.
+	Moment time.Time
 	// Delta is the amount of time that has passed since the Kernel's last impulse.
 	Delta time.Duration
 	// LastExecution is the amount of time that the Kernel last took to finish execution.

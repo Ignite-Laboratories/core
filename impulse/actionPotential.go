@@ -54,10 +54,10 @@ func (ap *actionPotential) Tick(ctx Context) {
 	if !ap.executing && ap.potential(ctx) {
 		ap.executing = true
 		if !ap.lastTrigger.IsZero() {
-			ctx.Delta = ctx.Now.Sub(ap.lastTrigger)
+			ctx.Delta = ctx.Moment.Sub(ap.lastTrigger)
 			ctx.LastExecution = ap.lastCompletion.Sub(ap.lastTrigger)
 		}
-		ap.lastTrigger = ctx.Now
+		ap.lastTrigger = ctx.Moment
 		go func() {
 			ap.action(ctx)
 			ap.lastCompletion = time.Now()
