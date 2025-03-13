@@ -1,11 +1,9 @@
 package core
 
-import (
-	"sync/atomic"
-)
+import "sync/atomic"
 
-// KeepAlive globally keeps any long-running routine alive until it is set to false.
-var KeepAlive = true
+// Alive globally keeps any long-running routine alive until it is set to false.
+var Alive = true
 
 // masterId holds the last provided entity identifier value.
 var masterId uint64
