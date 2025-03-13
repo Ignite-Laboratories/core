@@ -8,7 +8,7 @@ import (
 
 // Context represents a set of contextually relevant information for a Kernel.
 type Context struct {
-	// Moment is the moment in time the Clock itself observed for this beat.
+	// Moment is the moment in time for this beat of the Clock.
 	Moment time.Time
 	// Delta is the amount of time that has passed since the Kernel's last impulse.
 	Delta time.Duration

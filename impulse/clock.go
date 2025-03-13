@@ -15,8 +15,8 @@ import (
 type Clock struct {
 	// ID is the unique entity identifier for this Clock.
 	ID uint64
-	// BeatsPerLoop represents the last period's number of counted beats - it is a read-only value updated in real time.
-	BeatsPerLoop int
+	// BPL represents the last period's number of counted beats - it is a read-only value updated in real time.
+	BPL int
 	// Period represents the number this clock counts to before looping - it is a writable value.
 	Period int
 	// Activate provides a selection of helper methods for Kernel inception.
@@ -61,11 +61,11 @@ func (c *Clock) Start() {
 	var wg sync.WaitGroup
 	beat := 0
 	lastNow := time.Now()
-	tickCount := 0
-	tickCountStart := lastNow
+	pulseCount := 0
+	pulseCountStart := lastNow
 
 	for core.Alive {
-		tickCount++
+		pulseCount++
 
 		var ctx Context
 		ctx.Moment = time.Now()
@@ -75,18 +75,15 @@ func (c *Clock) Start() {
 		ctx.waitGroup = &wg
 
 		// Calculate the current clock rate
-		if tickCount > 1024 {
-			elapsed := ctx.Moment.Sub(tickCountStart).Seconds()
-			c.BeatsPerLoop = int(float64(tickCount) / elapsed)
-			tickCount = 0
-			tickCountStart = ctx.Moment
+		if pulseCount > 1024 {
+			elapsed := ctx.Moment.Sub(pulseCountStart).Seconds()
+			c.BPL = int(float64(pulseCount) / elapsed)
+			pulseCount = 0
+			pulseCountStart = ctx.Moment
 		}
 
-		// We retrieve all kernels first in case the
-		// data changes during this loop cycle.
-		ks := c.kernels.All()
-		wg.Add(len(ks))
-		for _, k := range ks {
+		for _, k := range c.kernels.All() {
+			wg.Add(1)
 			ctx.Kernel = k
 			go k.Execute(ctx)
 		}

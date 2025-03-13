@@ -15,15 +15,16 @@ type ActivationFunc func(ctx Context)
 type actionPotential struct {
 	// ID is the unique entity identifier for this actionPotential.
 	ID uint64
-	// lastTrigger is the last moment in Clock-time this actionPotential was activated.
-	lastTrigger    time.Time
+	// lastTrigger is the last beat's moment this actionPotential was activated.
+	lastTrigger time.Time
+	// lastCompletion is the last moment in time this actionPotential finished execution.
 	lastCompletion time.Time
 	// executing is true if this actionPotential is currently activated.
 	executing bool
-	// potential is a function that determines if the ActivationFunc should be invoked.
-	potential PotentialFunc
 	// action is a function that is invoked if the PotentialFunc returns true.
 	action ActivationFunc
+	// potential is a function that determines if the ActivationFunc should be invoked.
+	potential PotentialFunc
 }
 
 // newActionPotential initializes a Kernel with the provided potential and action.
