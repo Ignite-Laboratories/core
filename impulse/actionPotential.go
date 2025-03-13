@@ -15,9 +15,9 @@ type ActivationFunc func(ctx Context)
 type actionPotential struct {
 	// ID is the unique entity identifier for this actionPotential.
 	ID uint64
-	// lastTrigger is the last beat's moment this actionPotential was activated.
-	lastTrigger time.Time
-	// lastCompletion is the last moment in time this actionPotential finished execution.
+	// lastBeatMoment is the last beat's moment from which type of Kernel was activated.
+	lastBeatMoment time.Time
+	// lastCompletion is the last moment in time type of Kernel finished execution.
 	lastCompletion time.Time
 	// executing is true if this actionPotential is currently activated.
 	executing bool
@@ -57,16 +57,16 @@ func (ap *actionPotential) IsExecuting() bool {
 func (ap *actionPotential) Execute(ctx Context) {
 	if !ap.executing && ap.potential(ctx) {
 		ap.executing = true
-		if !ap.lastTrigger.IsZero() {
-			ctx.Delta = ctx.Moment.Sub(ap.lastTrigger)
-			ctx.LastDuration = ap.lastCompletion.Sub(ap.lastTrigger)
+		if !ap.lastBeatMoment.IsZero() {
+			ctx.Delta = ctx.Moment.Sub(ap.lastBeatMoment)
+			ctx.LastDuration = ap.lastCompletion.Sub(ap.lastBeatMoment)
 		}
-		ap.lastTrigger = ctx.Moment
 		go func() {
 			ap.action(ctx)
 			ap.lastCompletion = time.Now()
 			ap.executing = false
 		}()
+		ap.lastBeatMoment = ctx.Moment
 	}
 	ctx.waitGroup.Done()
 }

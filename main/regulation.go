@@ -7,23 +7,23 @@ import (
 	"time"
 )
 
-type TemporalFrame struct {
+type TemporalFragment struct {
 	lastNow      time.Time
 	lastDuration time.Duration
 	delta        time.Duration
 	absDelta     time.Duration
 }
 
-func NewTemporalFrame(now time.Time, duration time.Duration) TemporalFrame {
-	return TemporalFrame{
+func NewTemporalFragment(now time.Time, duration time.Duration) TemporalFragment {
+	return TemporalFragment{
 		lastNow:      now,
 		lastDuration: duration,
-		delta:        duration - pulseDuration,
+		delta:        duration - desiredDuration,
 		absDelta:     duration.Abs(),
 	}
 }
 
-var pulseDuration = time.Second / 100
+var desiredDuration = time.Second / 100
 var deviation = 5000
 var period = 100000
 var clock = impulse.NewClock(period)
@@ -53,7 +53,7 @@ func Regulate(ctx impulse.Context) {
 	// Calculate the average of all the temporal frames' deltas
 	timeline.Range(func(key, value interface{}) bool {
 		count++
-		frame, _ := value.(TemporalFrame)
+		frame, _ := value.(TemporalFragment)
 		avg += frame.delta.Nanoseconds()
 		return true
 	})
@@ -109,15 +109,15 @@ func observe(ctx impulse.Context, print bool) {
 	now := time.Now()
 
 	// Build the new temporal frame
-	var frame TemporalFrame
+	var frame TemporalFragment
 	var delta time.Duration
 	value, ok := timeline.Load(ctx.Kernel.GetID())
 	if ok {
 		// If a frame existed, calculate the delta between frames.
-		lastFrame, _ := value.(TemporalFrame)
+		lastFrame, _ := value.(TemporalFragment)
 		delta = now.Sub(lastFrame.lastNow)
 	}
-	frame = NewTemporalFrame(now, delta)
+	frame = NewTemporalFragment(now, delta)
 
 	// Print out that this kernel did something
 	if print {
